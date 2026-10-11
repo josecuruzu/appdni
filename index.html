@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de acceso DNI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8ECEF; --surface:#F7F9FA; --ink:#14212B; --muted:#5B6B77; --line:#CBD3D9;
+  --ok:#1B8F4F; --ok-ink:#fff; --no:#C93C3C; --no-ink:#fff; --warn:#E3A008; --warn-ink:#1d1500;
+  --accent:#0F5C73; --accent-ink:#fff;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-head:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151B; --surface:#17212A; --ink:#E7EDF1; --muted:#93A3AF; --line:#2B3946;
+    --ok:#22A45F; --accent:#3AA6C4; --accent-ink:#06161C;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151B; --surface:#17212A; --ink:#E7EDF1; --muted:#93A3AF; --line:#2B3946;
+  --accent:#3AA6C4; --accent-ink:#06161C;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+#camMsg{margin-top:8px;font-size:15px;font-weight:600;color:var(--no);overflow-wrap:anywhere}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 var(--f-body);-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+#evName{font:700 26px/1.1 var(--f-head);background:transparent;border:0;border-bottom:2px dashed var(--line);color:var(--ink);width:100%;padding:2px 0;min-width:0}
+#evName:focus{outline:none;border-bottom-color:var(--accent)}
+.count{text-align:right;flex:none}
+.count b{display:block;font:700 44px/0.9 var(--f-head)}
+.count span{font-size:13px;color:var(--muted)}
+nav{display:flex;gap:6px;margin-bottom:12px}
+nav button{flex:1;padding:10px 6px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:600 15px var(--f-body);border-radius:10px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel[hidden]{display:none}
+.view{position:relative;background:#000;border-radius:14px;overflow:hidden;aspect-ratio:4/3}
+.view video{width:100%;height:100%;object-fit:cover;display:block}
+.frame{position:absolute;left:8%;right:8%;top:30%;bottom:30%;border:3px solid rgba(255,255,255,.85);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.38);pointer-events:none}
+.view .hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;color:#fff;font-size:14px;text-shadow:0 1px 3px #000;padding:0 12px}
+.idle{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#cfd8de;text-align:center;padding:20px}
+.btn{display:inline-block;padding:12px 18px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);font:600 16px var(--f-body);cursor:pointer}
+.btn.alt{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:8px 12px;font-size:14px}
+.row{display:flex;gap:8px;margin-top:10px}
+.row>*{min-width:0}
+.field{flex:1;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 16px var(--f-body);width:100%}
+#result{margin-top:12px;border-radius:14px;padding:18px 16px;color:var(--ink);background:var(--surface);border:1px solid var(--line)}
+#result[hidden]{display:none}
+#result.ok{background:var(--ok);color:var(--ok-ink);border-color:transparent}
+#result.no{background:var(--no);color:var(--no-ink);border-color:transparent}
+#result.warn{background:var(--warn);color:var(--warn-ink);border-color:transparent}
+#result .state{font:700 54px/0.95 var(--f-head);letter-spacing:.2px}
+#result .who{font:600 22px/1.2 var(--f-body);margin-top:10px;overflow-wrap:anywhere}
+#result .meta{margin-top:4px;opacity:.92;font-size:16px}
+#result .why{margin-top:8px;font-weight:600}
+#result .acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+#result .btn{background:rgba(255,255,255,.92);color:#111}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.card h2{font:700 20px var(--f-head);margin:0 0 8px}
+.card label{display:block;margin:10px 0 4px;font-weight:600;font-size:14px}
+.card p{margin:6px 0;color:var(--muted);font-size:14px}
+textarea.field{min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;resize:vertical}
+.chk{display:flex;gap:10px;align-items:center;margin-top:12px;font-weight:500}
+.chk input{width:22px;height:22px;flex:none}
+.log{list-style:none;margin:0;padding:0}
+.log li{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.log .dot{width:12px;height:12px;border-radius:50%;flex:none;background:var(--ok)}
+.log .no .dot{background:var(--no)}
+.log .t{font:600 14px var(--f-body);color:var(--muted);width:46px;flex:none}
+.log .n{flex:1;min-width:0;overflow-wrap:anywhere}
+.log .n small{display:block;color:var(--muted)}
+.empty{color:var(--muted);text-align:center;padding:18px 8px}
+.foot{margin-top:18px;font-size:13px;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:no-preference){#result{animation:pop .16s ease-out}}
+@keyframes pop{from{transform:scale(.97);opacity:.4}to{transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <input id="evName" aria-label="Nombre del evento" placeholder="Nombre del evento" maxlength="60">
+    <div class="count"><b id="cIn">0</b><span id="cSub">adentro</span></div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-tab="scan">Escanear</button>
+    <button role="tab" aria-selected="false" data-tab="rules">Lista y reglas</button>
+    <button role="tab" aria-selected="false" data-tab="log">Registro</button>
+  </nav>
+
+  <!-- ESCANEAR -->
+  <section class="panel" id="p-scan">
+    <div class="view">
+      <video id="video" playsinline muted></video>
+      <div class="frame" id="frame" hidden></div>
+      <div class="hint" id="hint" hidden>Apuntá al código de barras del dorso del DNI</div>
+      <div class="idle" id="idle">
+        <div>La cámara está apagada</div>
+        <button class="btn" id="btnCam">Activar cámara</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn alt small" id="btnStop" hidden>Apagar cámara</button>
+    </div>
+    <div id="camMsg" role="alert"></div>
+    <div class="row">
+      <label class="btn alt" style="flex:1;text-align:center;cursor:pointer;margin:0">Sacar foto al DNI<input type="file" id="photo" accept="image/*" capture="environment" hidden></label>
+    </div>
+    <p class="foot" style="text-align:left;margin-top:6px">Si la cámara en vivo no abre, usá este botón: toma una foto del código con la cámara del celular y lo lee.</p>
+
+    <div id="result" hidden></div>
+
+    <div class="row">
+      <input class="field" id="manual" inputmode="numeric" autocomplete="off" placeholder="DNI a mano o lector externo" aria-label="DNI manual o lector externo">
+      <button class="btn" id="btnManual">Validar</button>
+    </div>
+    <p class="foot" style="text-align:left;margin-top:6px">Un lector de código de barras USB/Bluetooth también funciona: tocá el campo y escaneá.</p>
+  </section>
+
+  <!-- LISTA Y REGLAS -->
+  <section class="panel" id="p-rules" hidden>
+    <div class="card">
+      <h2>Reglas de ingreso</h2>
+      <label for="mode">Quién puede entrar</label>
+      <select class="field" id="mode">
+        <option value="open">Cualquier DNI válido</option>
+        <option value="list">Solo los de la lista de invitados</option>
+      </select>
+      <label for="minAge">Edad mínima</label>
+      <select class="field" id="minAge">
+        <option value="0">Sin control de edad</option>
+        <option value="16">16 años</option>
+        <option value="18">18 años</option>
+        <option value="21">21 años</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="noDup"> Avisar si el DNI ya ingresó</label>
+    </div>
+
+    <div class="card">
+      <h2>Lista de invitados</h2>
+      <p>Un invitado por línea: DNI, o DNI y nombre separados por coma, punto y coma o tabulación. Los puntos del DNI se ignoran.</p>
+      <textarea class="field" id="guestText" placeholder="12.345.678, Ana Pérez&#10;23456789&#10;Juan Gómez; 34567890"></textarea>
+      <div class="row">
+        <button class="btn" id="btnLoad">Guardar lista</button>
+        <label class="btn alt" style="text-align:center;cursor:pointer;margin:0;font-weight:600">Abrir CSV<input type="file" id="file" accept=".csv,.txt,text/csv,text/plain" hidden></label>
+      </div>
+      <p id="guestInfo"></p>
+    </div>
+  </section>
+
+  <!-- REGISTRO -->
+  <section class="panel" id="p-log" hidden>
+    <div class="row" style="margin:0 0 10px">
+      <button class="btn small" id="btnExport">Exportar CSV</button>
+      <button class="btn alt small" id="btnClear">Vaciar registro</button>
+    </div>
+    <div class="card" id="exportBox" hidden>
+      <h2>CSV listo</h2>
+      <textarea class="field" id="csvOut" readonly style="min-height:150px"></textarea>
+      <div class="row">
+        <button class="btn small" id="btnCopy">Copiar</button>
+        <button class="btn alt small" id="btnDl">Descargar</button>
+      </div>
+      <p id="exportMsg"></p>
+    </div>
+    <div class="card" style="padding:4px 14px">
+      <ul class="log" id="logList"></ul>
+      <div class="empty" id="logEmpty">Todavía no hay ingresos registrados.</div>
+    </div>
+  </section>
+
+  <p class="foot">Los datos quedan solo en este dispositivo. Nada se envía a ningún servidor.</p>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(id){return document.getElementById(id)};
+var KEY="dni-acceso-v1";
+var S={event:"",mode:"open",minAge:0,noDup:true,guests:[],log:[]};
+
+/* ---------- almacenamiento ---------- */
+function load(){
+  try{var r=localStorage.getItem(KEY);if(r){var o=JSON.parse(r);for(var k in S){if(o[k]!==undefined)S[k]=o[k]}}}catch(e){}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+/* ---------- utilidades ---------- */
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function title(s){return String(s||"").toLowerCase().replace(/(^|[\s\-'])(\S)/g,function(m,a,b){return a+b.toUpperCase()})}
+function hhmm(t){return new Date(t).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"})}
+function stamp(t){var d=new Date(t),p=function(n){return String(n).padStart(2,"0")};return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())}
+function digits(s){return String(s).replace(/\D/g,"")}
+function validDni(s){return /^\d{7,8}$/.test(s)}
+function parseDate(s){
+  var m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(String(s||"").trim());
+  if(!m)return null;
+  var d=+m[1],mo=+m[2],y=+m[3];
+  if(mo<1||mo>12||d<1||d>31||y<1900||y>2100)return null;
+  return new Date(y,mo-1,d);
+}
+function ageOf(date){
+  if(!date)return null;
+  var n=new Date(),a=n.getFullYear()-date.getFullYear(),m=n.getMonth()-date.getMonth();
+  if(m<0||(m===0&&n.getDate()<date.getDate()))a--;
+  return a>=0&&a<130?a:null;
+}
+
+/* ---------- lectura del DNI (PDF417) ---------- */
+/* Tarjeta nueva:  trámite@APELLIDO@NOMBRE@SEXO@DNI@EJEMPLAR@NAC@EMISION@...
+   Formato anterior: @DNI@EJEMPLAR@APELLIDO@NOMBRE@PAÍS@NAC@SEXO@EMISION@...  */
+function parseDNI(raw){
+  if(!raw)return null;
+  var txt=String(raw).replace(/[\r\n]+/g,"").trim();
+  if(txt.indexOf("@")<0){
+    var d=digits(txt);
+    return validDni(d)&&d.length===txt.replace(/[.\s]/g,"").length?{dni:d,apellido:"",nombre:"",nac:null,manual:true}:null;
+  }
+  var p=txt.split("@").map(function(x){return x.trim()});
+  var i,out=null;
+  for(i=1;i<p.length-1;i++){
+    if(/^[MFX]$/i.test(p[i])&&validDni(p[i+1])){
+      out={dni:p[i+1],apellido:p[i-2]||"",nombre:p[i-1]||"",nac:parseDate(p[i+3])};
+      if(!out.nac){for(var j=i+2;j<p.length;j++){var dd=parseDate(p[j]);if(dd){out.nac=dd;break}}}
+      return out;
+    }
+  }
+  var k=p[0]===""?1:0;
+  if(validDni(p[k])&&/^[A-Z]$/i.test(p[k+1]||"")){
+    out={dni:p[k],apellido:p[k+2]||"",nombre:p[k+3]||"",nac:null};
+    for(var q=k+4;q<p.length;q++){var d2=parseDate(p[q]);if(d2){out.nac=d2;break}}
+    return out;
+  }
+  return null;
+}
+
+/* ---------- lista de invitados ---------- */
+function parseGuests(text){
+  var seen={},out=[];
+  text.split(/\r?\n/).forEach(function(line){
+    line=line.trim();if(!line)return;
+    var toks=line.split(/[,;\t]/).map(function(t){return t.trim()}).filter(Boolean);
+    var dni="",rest=[];
+    toks.forEach(function(t){
+      var c=t.replace(/[.\s]/g,"");
+      if(!dni&&validDni(c))dni=c;else rest.push(t);
+    });
+    if(dni&&!seen[dni]){seen[dni]=1;out.push({dni:dni,name:rest.join(" ")})}
+  });
+  return out;
+}
+function guestOf(dni){for(var i=0;i<S.guests.length;i++){if(S.guests[i].dni===dni)return S.guests[i]}return null}
+function renderGuests(){
+  $("guestInfo").textContent=S.guests.length?S.guests.length+" invitados cargados.":"No hay invitados cargados.";
+  $("cSub").textContent=S.mode==="list"&&S.guests.length?"adentro de "+S.guests.length:"adentro";
+}
+
+/* ---------- feedback sonoro ---------- */
+var actx=null;
+function beep(kind){
+  try{
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    var seq=kind==="ok"?[[880,0,.12]]:kind==="warn"?[[520,0,.12],[520,.18,.12]]:[[220,0,.18],[180,.22,.22]];
+    seq.forEach(function(s){
+      var o=actx.createOscillator(),g=actx.createGain();
+      o.frequency.value=s[0];o.type="square";g.gain.value=.06;
+      o.connect(g);g.connect(actx.destination);
+      o.start(actx.currentTime+s[1]);o.stop(actx.currentTime+s[1]+s[2]);
+    });
+  }catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate(kind==="ok"?60:[90,60,90])}catch(e){}
+}
+
+/* ---------- validación ---------- */
+var pending=null;
+function showResult(cls,state,p,extra){
+  var r=$("result");
+  r.hidden=false;r.className=cls;
+  var who=p?title((p.apellido+" "+p.nombre).trim()):"";
+  var meta=[];
+  if(p&&p.dni)meta.push("DNI "+p.dni.replace(/\B(?=(\d{3})+(?!\d))/g,"."));
+  if(p&&p.age!=null)meta.push(p.age+" años");
+  var html='<div class="state">'+esc(state)+'</div>';
+  if(who)html+='<div class="who">'+esc(who)+'</div>';
+  if(meta.length)html+='<div class="meta">'+esc(meta.join(" · "))+'</div>';
+  if(extra&&extra.why)html+='<div class="why">'+esc(extra.why)+'</div>';
+  html+='<div class="acts">';
+  if(extra&&extra.override)html+='<button class="btn" id="btnOver">Dejar pasar igual</button>';
+  html+='<button class="btn" id="btnNext">Siguiente</button></div>';
+  r.innerHTML=html;
+  var n=$("btnNext");if(n)n.onclick=function(){r.hidden=true;pending=null;$("manual").focus()};
+  var o=$("btnOver");if(o)o.onclick=function(){if(pending){commit(pending,true)}};
+}
+function commit(p,manual){
+  var t=Date.now();
+  S.log.unshift({t:t,dni:p.dni,name:title((p.apellido+" "+p.nombre).trim()),age:p.age,ok:true,reason:manual?"Autorizado manualmente":""});
+  save();renderLog();
+  showResult("ok","Adelante",p,{why:manual?"Autorizado manualmente":""});
+  beep("ok");pending=null;
+}
+function reject(p,reason,allowOverride,kind){
+  S.log.unshift({t:Date.now(),dni:p.dni,name:title((p.apellido+" "+p.nombre).trim()),age:p.age,ok:false,reason:reason});
+  save();renderLog();
+  pending=allowOverride?p:null;
+  showResult(kind==="warn"?"warn":"no",kind==="warn"?"Ya ingresó":"No pasa",p,{why:reason,override:allowOverride});
+  beep(kind==="warn"?"warn":"no");
+}
+function process(raw){
+  var p=parseDNI(raw);
+  if(!p){
+    showResult("warn","No se leyó",null,{why:"El código no parece un DNI argentino. Probá de nuevo o ingresá el número a mano."});
+    beep("warn");return;
+  }
+  p.age=ageOf(p.nac);
+  var g=guestOf(p.dni);
+  if(g&&!p.apellido&&!p.nombre)p.apellido=g.name;
+  if(S.minAge>0){
+    if(p.age==null&&!p.manual){reject(p,"No se pudo calcular la edad",false,"no");return}
+    if(p.age!=null&&p.age<S.minAge){reject(p,"Menor de "+S.minAge+" años",false,"no");return}
+  }
+  if(S.mode==="list"&&!g){reject(p,"No figura en la lista de invitados",true,"no");return}
+  if(S.noDup){
+    for(var i=0;i<S.log.length;i++){
+      if(S.log[i].dni===p.dni&&S.log[i].ok){reject(p,"Ingresó a las "+hhmm(S.log[i].t),true,"warn");return}
+    }
+  }
+  commit(p,false);
+}
+
+/* ---------- cámara y lectura ---------- */
+var video=$("video"),stream=null,detector=null,zx=null,running=false,timer=null,lastCode="",lastAt=0;
+function camMsg(t){$("camMsg").textContent=t||""}
+function setCamUI(on){
+  $("idle").hidden=on;$("frame").hidden=!on;$("hint").hidden=!on;$("btnStop").hidden=!on;
+}
+function onCode(code){
+  var t=Date.now();
+  if(code===lastCode&&t-lastAt<3000){lastAt=t;return}
+  lastCode=code;lastAt=t;process(code);
+}
+function loadZX(){
+  return new Promise(function(res,rej){
+    if(window.ZXing)return res();
+    var s=document.createElement("script");
+    s.src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+    s.onload=function(){res()};s.onerror=function(){rej(new Error("zxing"))};
+    document.head.appendChild(s);
+  });
+}
+async function startCam(){
+  camMsg("");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    camMsg("Este navegador no permite usar la cámara. Usá el campo de DNI o un lector externo.");return;
+  }
+  try{
+    detector=null;
+    if("BarcodeDetector" in window){
+      try{
+        var f=await window.BarcodeDetector.getSupportedFormats();
+        if(f.indexOf("pdf417")>=0)detector=new window.BarcodeDetector({formats:["pdf417"]});
+      }catch(e){}
+    }
+    var cons={video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},audio:false};
+    running=true;setCamUI(true);
+    if(detector){
+      stream=await navigator.mediaDevices.getUserMedia(cons);
+      video.srcObject=stream;await video.play();
+      (function tick(){
+        if(!running)return;
+        if(video.readyState>=2){
+          detector.detect(video).then(function(c){if(c&&c.length&&running)onCode(c[0].rawValue)}).catch(function(){});
+        }
+        timer=setTimeout(tick,140);
+      })();
+    }else{
+      camMsg("Cargando lector…");
+      await loadZX();
+      zx=new window.ZXing.BrowserPDF417Reader();
+      await zx.decodeFromConstraints(cons,video,function(res){if(res&&running)onCode(res.getText())});
+      camMsg("");
+    }
+  }catch(e){
+    stopCam();
+    var n=e&&e.name;
+    camMsg((n==="NotAllowedError"?"El navegador bloqueó la cámara. Abrí el enlace directamente en Chrome o Safari (no dentro de otra app ni de una vista previa) y aceptá el permiso. ":"No se pudo iniciar la cámara. ")+"Mientras tanto usá «Sacar foto al DNI» o el campo de DNI. ["+(n||"error")+": "+((e&&e.message)||"")+"]");
+  }
+}
+function stopCam(){
+  running=false;clearTimeout(timer);
+  try{if(zx){zx.reset();zx=null}}catch(e){}
+  try{if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}}catch(e){}
+  try{video.srcObject=null}catch(e){}
+  setCamUI(false);
+}
+$("btnCam").onclick=startCam;
+$("btnStop").onclick=stopCam;
+
+/* lectura desde foto (no necesita cámara en vivo) */
+$("photo").onchange=async function(){
+  var f=this.files&&this.files[0];this.value="";if(!f)return;
+  camMsg("Leyendo foto…");
+  var url=URL.createObjectURL(f),code=null;
+  try{
+    if("BarcodeDetector" in window){
+      try{
+        var fm=await window.BarcodeDetector.getSupportedFormats();
+        if(fm.indexOf("pdf417")>=0){
+          var bmp=await createImageBitmap(f);
+          var r=await new window.BarcodeDetector({formats:["pdf417"]}).detect(bmp);
+          if(r&&r.length)code=r[0].rawValue;
+        }
+      }catch(e){}
+    }
+    if(!code){
+      await loadZX();
+      var res=await new window.ZXing.BrowserPDF417Reader().decodeFromImageUrl(url);
+      code=res.getText();
+    }
+    camMsg("");lastCode="";process(code);
+  }catch(e){
+    camMsg("No se encontró un código en la foto. Acercate para que el código ocupe buena parte de la imagen, con buena luz y sin reflejos.");
+  }finally{URL.revokeObjectURL(url)}
+};
+
+/* ---------- entrada manual / lector externo ---------- */
+function doManual(){
+  var v=$("manual").value.trim();if(!v)return;
+  $("manual").value="";process(v);
+}
+$("btnManual").onclick=doManual;
+$("manual").addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();doManual()}});
+
+/* ---------- pestañas ---------- */
+var tabs=document.querySelectorAll("nav button");
+function showTab(name){
+  tabs.forEach(function(b){b.setAttribute("aria-selected",b.dataset.tab===name?"true":"false")});
+  ["scan","rules","log"].forEach(function(n){$("p-"+n).hidden=n!==name});
+  if(name!=="scan"&&running)stopCam();
+}
+tabs.forEach(function(b){b.onclick=function(){showTab(b.dataset.tab)}});
+
+/* ---------- reglas ---------- */
+$("evName").oninput=function(){S.event=this.value;save()};
+$("mode").onchange=function(){S.mode=this.value;save();renderGuests();updateCount()};
+$("minAge").onchange=function(){S.minAge=+this.value;save()};
+$("noDup").onchange=function(){S.noDup=this.checked;save()};
+$("btnLoad").onclick=function(){
+  S.guests=parseGuests($("guestText").value);save();renderGuests();updateCount();
+  if(S.guests.length&&S.mode!=="list"){$("guestInfo").textContent+=" Cambiá «Quién puede entrar» para exigir la lista."}
+};
+$("file").onchange=function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){$("guestText").value=String(r.result);$("btnLoad").click()};
+  r.readAsText(f);this.value="";
+};
+
+/* ---------- registro ---------- */
+function updateCount(){
+  var n=0;S.log.forEach(function(e){if(e.ok)n++});
+  $("cIn").textContent=n;
+}
+function renderLog(){
+  var ul=$("logList");ul.innerHTML="";
+  S.log.forEach(function(e){
+    var li=document.createElement("li");li.className=e.ok?"ok":"no";
+    var name=e.name||"Sin nombre";
+    li.innerHTML='<span class="dot"></span><span class="t">'+hhmm(e.t)+'</span><span class="n">'+esc(name)+'<small>DNI '+esc(e.dni)+(e.reason?" · "+esc(e.reason):"")+'</small></span>';
+    ul.appendChild(li);
+  });
+  $("logEmpty").hidden=S.log.length>0;
+  updateCount();
+}
+function csvText(){
+  var q=function(v){v=String(v==null?"":v);return /[",\n;]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+  var rows=[["fecha_hora","dni","nombre","edad","resultado","motivo"]];
+  S.log.slice().reverse().forEach(function(e){rows.push([stamp(e.t),e.dni,e.name,e.age==null?"":e.age,e.ok?"ingreso":"rechazado",e.reason||""])});
+  return rows.map(function(r){return r.map(q).join(",")}).join("\n");
+}
+$("btnExport").onclick=function(){
+  if(!S.log.length){return}
+  $("csvOut").value=csvText();$("exportBox").hidden=false;$("exportMsg").textContent="";
+  $("csvOut").focus();$("csvOut").select();
+};
+$("btnCopy").onclick=function(){
+  var ta=$("csvOut"),ok=false;
+  ta.focus();ta.select();
+  try{ok=document.execCommand("copy")}catch(e){}
+  if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value).then(function(){$("exportMsg").textContent="Copiado."}).catch(function(){$("exportMsg").textContent="No se pudo copiar. Mantené apretado el texto y elegí Copiar."});return}
+  $("exportMsg").textContent=ok?"Copiado.":"No se pudo copiar. Mantené apretado el texto y elegí Copiar.";
+};
+$("btnDl").onclick=function(){
+  try{
+    var b=new Blob(["\ufeff"+$("csvOut").value],{type:"text/csv;charset=utf-8"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(b);
+    a.download="ingresos-"+stamp(Date.now()).slice(0,10)+".csv";
+    document.body.appendChild(a);a.click();a.remove();
+    $("exportMsg").textContent="Si no se descargó, usá Copiar y pegalo en una planilla.";
+  }catch(e){$("exportMsg").textContent="No se pudo descargar. Usá Copiar."}
+};
+$("btnClear").onclick=function(){
+  if(!S.log.length)return;
+  if(window.confirm("¿Vaciar todo el registro de ingresos? No se puede deshacer.")){S.log=[];save();renderLog();$("exportBox").hidden=true}
+};
+
+/* ---------- inicio ---------- */
+load();
+$("evName").value=S.event;
+$("mode").value=S.mode;
+$("minAge").value=String(S.minAge);
+$("noDup").checked=!!S.noDup;
+$("guestText").value=S.guests.map(function(g){return g.name?g.dni+", "+g.name:g.dni}).join("\n");
+renderGuests();renderLog();
+window.addEventListener("pagehide",stopCam);
+})();
+</script>
+</body>
+</html>
